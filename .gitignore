@@ -1,0 +1,6 @@
+.env
+node_modules
+.vscode
+pb_data
+ngrok
+.DS_Store
