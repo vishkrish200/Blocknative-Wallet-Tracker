@@ -22,42 +22,44 @@ const brainWebhookClient = new WebhookClient({
   token: "eE6hl46ik8T7qaOI7YfQ2ODv9DxB0bL6KXjjAUZYLfATKzJmEV9DWMB390dJBleEZSOj",
 });
 
-const brainEmbed = new EmbedBuilder()
-  // .setTitle("Transaction")
-  .setColor(0x00ffff);
-
-const confirmedEmbed = new EmbedBuilder()
-  .setColor("Green")
-  .setTitle("Transaction Confirmed");
-
 const PORT = 3000;
 
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 app.use(express.json());
 
+let messageId = "";
 app.post("/brain", async (req, res) => {
-  let response = req.body;
-  const tx_hash = response.hash;
-  const watchedAddress = response.watchedAddress;
+  const brainEmbed = new EmbedBuilder();
+  const confirmedEmbed = new EmbedBuilder()
+    .setColor("Green")
+    .setTitle("Transaction Confirmed");
+  const request = req.body;
+  const tx_hash = request.hash;
+  const watchedAddress = request.watchedAddress;
   try {
     let { data, error } = await supabase
       .from("wallets")
       .select("name,label")
       .ilike("address", watchedAddress);
 
-    if (response.status === "pending") {
-      const action = checkFunction(response.contractCall?.methodName);
+    const action = checkFunction(request.contractCall?.methodName);
+    if (request.status === "pending") {
       brainEmbed
         .setTitle(`${data[0].name}`)
         .setURL(`https://goerli.etherscan.io/address/${watchedAddress}`)
         .setDescription(
           `[Transaction Pending](https://goerli.etherscan.io/tx/${tx_hash})`
         )
-        .addFields({
+        .addFields({ name: "To", value: `${request.to}` });
+
+      if (request.contractCall?.contractName) {
+        brainEmbed.addFields({
           name: "Contract Name",
-          value: `${response.contractCall?.contractName}`,
+          value: `${request.contractCall?.contractName}`,
           inline: true,
-        })
+        });
+      }
+      brainEmbed
         .addFields({
           name: "Function",
           value: `${action}`,
@@ -65,27 +67,60 @@ app.post("/brain", async (req, res) => {
         })
         .addFields({
           name: "Value",
-          value: `${Utils.formatEther(response.value)} ETH`,
+          value: `${Utils.formatEther(request.value)} ETH`,
           inline: true,
         })
-        .addFields({ name: "To", value: `${response.to}` })
+        .addFields({
+          name: "Gas",
+          value: `Base: ${request.maxFeePerGasGwei} gwei\nPrio: ${request.maxPriorityFeePerGasGwei} gwei`,
+        })
         .setColor("Yellow");
+      await brainWebhookClient
+        .send({
+          content: " ",
+          username: "brain",
+          avatarURL: "https://i.imgur.com/AfFp7pu.png",
+          embeds: [brainEmbed],
+        })
+        .then((message) => {
+          messageId = message.id;
+        });
+    } else if (request.status === "confirmed") {
+      brainEmbed
+        .setColor("Green")
+        .setTitle(`${data[0].name}`)
+        .setURL(`https://goerli.etherscan.io/address/${watchedAddress}`)
+        .setDescription(
+          `[Transaction Confirmed](https://goerli.etherscan.io/tx/${tx_hash})`
+        )
+        .addFields({ name: "To", value: `${request.to}` });
+      if (request.contractCall?.contractName) {
+        brainEmbed.addFields({
+          name: "Contract Name",
+          value: `${request.contractCall?.contractName}`,
+          inline: true,
+        });
+      }
+      brainEmbed
+        .addFields({
+          name: "Function",
+          value: `${action}`,
+          inline: true,
+        })
+        .addFields({
+          name: "Value",
+          value: `${Utils.formatEther(request.value)} ETH`,
+          inline: true,
+        })
+        .addFields({
+          name: "Gas",
+          value: `Base: ${request.maxFeePerGasGwei} gwei\nPrio: ${request.maxPriorityFeePerGasGwei} gwei`,
+        });
       await brainWebhookClient.send({
-        content: ` `,
+        content: " ",
         username: "brain",
         avatarURL: "https://i.imgur.com/AfFp7pu.png",
         embeds: [brainEmbed],
-      });
-    } else if (response.status === "confirmed") {
-      brainEmbed.setColor("Green");
-      confirmedEmbed
-        .setTitle("Transaction Confirmed")
-        .setURL(`https://goerli.etherscan.io/tx/${tx_hash}`);
-      await brainWebhookClient.send({
-        content: ` `,
-        username: "brain",
-        avatarURL: "https://i.imgur.com/AfFp7pu.png",
-        embeds: [confirmedEmbed],
       });
     }
   } catch (error) {
@@ -97,6 +132,7 @@ app.post("/brain", async (req, res) => {
 function checkFunction(functionName) {
   if (functionName === "fulfillAvailableOrders") return "Sold";
   else if (functionName === "matchOrders") return "Bought";
+  else if (functionName === undefined) return "Transfer";
 }
 
 const coinWebhookClient = new WebhookClient({
@@ -104,23 +140,3 @@ const coinWebhookClient = new WebhookClient({
   token: "k4s4T62awrSf8Fw3n8_nduMgaRh_IqqW9dQocWv33lj2U6_OKQE4huGTkpA55fwmpoJA",
 });
 const coinEmbed = new EmbedBuilder().setTitle("Transaction").setColor(0x00ffff);
-
-// app.post("/coin", async (req, res) => {
-//   let response = await req.body;
-//   const tx_hash = response.hash;
-//   try {
-//     await coinEmbed.addFields({
-//       name: "Transaction",
-//       value: `[Etherscan] (https://etherscan.io/tx/${tx_hash})`,
-//     });
-//     coinWebhookClient.send({
-//       content: "",
-//       username: "coin",
-//       avatarURL: "https://i.imgur.com/AfFp7pu.png",
-//       embeds: [coinEmbed],
-//     });
-//   } catch (error) {
-//     console.log(error);
-//   }
-//   res.status(200).end(); // Responding is important
-// });
