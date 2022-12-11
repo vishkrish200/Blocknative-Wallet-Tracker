@@ -22,17 +22,13 @@ const brainWebhookClient = new WebhookClient({
   token: "eE6hl46ik8T7qaOI7YfQ2ODv9DxB0bL6KXjjAUZYLfATKzJmEV9DWMB390dJBleEZSOj",
 });
 
-const PORT = 3000;
+const PORT = 8080;
 
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 app.use(express.json());
 
-let messageId = "";
 app.post("/brain", async (req, res) => {
   const brainEmbed = new EmbedBuilder();
-  const confirmedEmbed = new EmbedBuilder()
-    .setColor("Green")
-    .setTitle("Transaction Confirmed");
   const request = req.body;
   const tx_hash = request.hash;
   const watchedAddress = request.watchedAddress;
@@ -46,9 +42,9 @@ app.post("/brain", async (req, res) => {
     if (request.status === "pending") {
       brainEmbed
         .setTitle(`${data[0].name}`)
-        .setURL(`https://goerli.etherscan.io/address/${watchedAddress}`)
+        .setURL(`https://etherscan.io/address/${watchedAddress}`)
         .setDescription(
-          `[Transaction Pending](https://goerli.etherscan.io/tx/${tx_hash})`
+          `[Transaction Pending](https://etherscan.io/tx/${tx_hash})`
         )
         .addFields({ name: "To", value: `${request.to}` });
 
@@ -89,9 +85,9 @@ app.post("/brain", async (req, res) => {
       brainEmbed
         .setColor("Green")
         .setTitle(`${data[0].name}`)
-        .setURL(`https://goerli.etherscan.io/address/${watchedAddress}`)
+        .setURL(`https://etherscan.io/address/${watchedAddress}`)
         .setDescription(
-          `[Transaction Confirmed](https://goerli.etherscan.io/tx/${tx_hash})`
+          `[Transaction Confirmed](https://etherscan.io/tx/${tx_hash})`
         )
         .addFields({ name: "To", value: `${request.to}` });
       if (request.contractCall?.contractName) {
@@ -132,7 +128,9 @@ app.post("/brain", async (req, res) => {
 function checkFunction(functionName) {
   if (functionName === "fulfillAvailableOrders") return "Sold";
   else if (functionName === "matchOrders") return "Bought";
+  else if (functionName === "mint") return "Minted";
   else if (functionName === undefined) return "Transfer";
+  else return `${functionName}`;
 }
 
 const coinWebhookClient = new WebhookClient({
