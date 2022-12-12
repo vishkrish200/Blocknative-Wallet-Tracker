@@ -9,6 +9,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 import { createClient } from "@supabase/supabase-js";
 import { Alchemy, Utils } from "alchemy-sdk";
+import e from "express";
 
 const app = express();
 const alchemy = new Alchemy();
@@ -21,14 +22,117 @@ const brainWebhookClient = new WebhookClient({
   id: "1043521694490427392",
   token: "eE6hl46ik8T7qaOI7YfQ2ODv9DxB0bL6KXjjAUZYLfATKzJmEV9DWMB390dJBleEZSOj",
 });
+const artblockClient = new WebhookClient({
+  id: "1051918585523617902",
+  token: "dCxCsGHsaDQJrv1fJyL7phxPqbZHe8BRqS71abaVJhlnD38DXDIb8TBPTnqBoeZKSTkX",
+});
 
 const PORT = 8080;
 
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 app.use(express.json());
 
-app.post("/brain", async (req, res) => {
-  const brainEmbed = new EmbedBuilder();
+// app.post("/brain", async (req, res) => {
+//   const brainEmbed = new EmbedBuilder();
+//   const request = req.body;
+//   const tx_hash = request.hash;
+//   const watchedAddress = request.watchedAddress;
+//   try {
+//     let { data, error } = await supabase
+//       .from("wallets")
+//       .select("name,label")
+//       .ilike("address", watchedAddress);
+
+//     const action = checkFunction(request.contractCall?.methodName);
+//     if (request.status === "pending") {
+//       brainEmbed
+//         .setTitle(`${data[0].name}`)
+//         .setURL(`https://etherscan.io/address/${watchedAddress}`)
+//         .setDescription(
+//           `[Transaction Pending](https://etherscan.io/tx/${tx_hash})`
+//         )
+//         .addFields({ name: "To", value: `${request.to}` });
+
+//       if (request.contractCall?.contractName) {
+//         brainEmbed.addFields({
+//           name: "Contract Name",
+//           value: `${request.contractCall?.contractName}`,
+//           inline: true,
+//         });
+//       }
+//       brainEmbed
+//         .addFields({
+//           name: "Function",
+//           value: `${action}`,
+//           inline: true,
+//         })
+//         .addFields({
+//           name: "Value",
+//           value: `${Utils.formatEther(request.value)} ETH`,
+//           inline: true,
+//         })
+//         .addFields({
+//           name: "Gas",
+//           value: `Base: ${request.maxFeePerGasGwei} gwei\nPrio: ${request.maxPriorityFeePerGasGwei} gwei`,
+//         })
+//         .setColor("Yellow");
+//       await brainWebhookClient
+//         .send({
+//           content: " ",
+//           username: "brain",
+//           avatarURL: "https://i.imgur.com/AfFp7pu.png",
+//           embeds: [brainEmbed],
+//         })
+//         .then((message) => {
+//           messageId = message.id;
+//         });
+//     } else if (request.status === "confirmed") {
+//       brainEmbed
+//         .setColor("Green")
+//         .setTitle(`${data[0].name}`)
+//         .setURL(`https://etherscan.io/address/${watchedAddress}`)
+//         .setDescription(
+//           `[Transaction Confirmed](https://etherscan.io/tx/${tx_hash})`
+//         );
+//       if (request.from === watchedAddress)
+//         brainEmbed.addFields({ name: "To", value: `${request.to}` });
+//       else brainEmbed.addFields({ name: "From", value: `${request.to}` });
+//       if (request.contractCall?.contractName) {
+//         brainEmbed.addFields({
+//           name: "Contract Name",
+//           value: `${request.contractCall?.contractName}`,
+//           inline: true,
+//         });
+//       }
+//       brainEmbed
+//         .addFields({
+//           name: "Function",
+//           value: `${action}`,
+//           inline: true,
+//         })
+//         .addFields({
+//           name: "Value",
+//           value: `${Utils.formatEther(request.value)} ETH`,
+//           inline: true,
+//         })
+//         .addFields({
+//           name: "Gas",
+//           value: `Base: ${request.maxFeePerGasGwei} gwei\nPrio: ${request.maxPriorityFeePerGasGwei} gwei`,
+//         });
+//       await brainWebhookClient.send({
+//         content: " ",
+//         username: "brain",
+//         avatarURL: "https://i.imgur.com/AfFp7pu.png",
+//         embeds: [brainEmbed],
+//       });
+//     }
+//   } catch (error) {
+//     console.log(error);
+//   }
+//   res.status(200).end(); // Responding is important
+// });
+app.post("/artblock", async (req, res) => {
+  const artblockEmbed = new EmbedBuilder();
   const request = req.body;
   const tx_hash = request.hash;
   const watchedAddress = request.watchedAddress;
@@ -37,25 +141,29 @@ app.post("/brain", async (req, res) => {
       .from("wallets")
       .select("name,label")
       .ilike("address", watchedAddress);
+    const walletName = data[0].name;
 
     const action = checkFunction(request.contractCall?.methodName);
     if (request.status === "pending") {
-      brainEmbed
-        .setTitle(`${data[0].name}`)
+      artblockEmbed
+        .setTitle(`${walletName ? walletName : watchedAddress}`)
         .setURL(`https://etherscan.io/address/${watchedAddress}`)
         .setDescription(
           `[Transaction Pending](https://etherscan.io/tx/${tx_hash})`
         )
-        .addFields({ name: "To", value: `${request.to}` });
+        .addFields({
+          name: "Gas",
+          value: `Base: ${request.maxFeePerGasGwei} gwei\nPrio: ${request.maxPriorityFeePerGasGwei} gwei`,
+        });
 
       if (request.contractCall?.contractName) {
-        brainEmbed.addFields({
+        artblockEmbed.addFields({
           name: "Contract Name",
           value: `${request.contractCall?.contractName}`,
           inline: true,
         });
       }
-      brainEmbed
+      artblockEmbed
         .addFields({
           name: "Function",
           value: `${action}`,
@@ -66,38 +174,41 @@ app.post("/brain", async (req, res) => {
           value: `${Utils.formatEther(request.value)} ETH`,
           inline: true,
         })
-        .addFields({
-          name: "Gas",
-          value: `Base: ${request.maxFeePerGasGwei} gwei\nPrio: ${request.maxPriorityFeePerGasGwei} gwei`,
-        })
+        .addFields({ name: "To", value: `${request.to}` })
         .setColor("Yellow");
-      await brainWebhookClient
+      await artblockClient
         .send({
           content: " ",
           username: "brain",
           avatarURL: "https://i.imgur.com/AfFp7pu.png",
-          embeds: [brainEmbed],
+          embeds: [artblockEmbed],
         })
         .then((message) => {
           messageId = message.id;
         });
     } else if (request.status === "confirmed") {
-      brainEmbed
+      artblockEmbed
         .setColor("Green")
-        .setTitle(`${data[0].name}`)
+        .setTitle(`${walletName ? walletName : watchedAddress}`)
         .setURL(`https://etherscan.io/address/${watchedAddress}`)
         .setDescription(
           `[Transaction Confirmed](https://etherscan.io/tx/${tx_hash})`
         )
-        .addFields({ name: "To", value: `${request.to}` });
+        .addFields({
+          name: "Gas",
+          value: `Base: ${request.maxFeePerGasGwei} gwei\nPrio: ${request.maxPriorityFeePerGasGwei} gwei`,
+        });
+      if (request.from === watchedAddress)
+        artblockEmbed.addFields({ name: "To", value: `${request.to}` });
+      else artblockEmbed.addFields({ name: "From", value: `${request.to}` });
       if (request.contractCall?.contractName) {
-        brainEmbed.addFields({
+        artblockEmbed.addFields({
           name: "Contract Name",
           value: `${request.contractCall?.contractName}`,
           inline: true,
         });
       }
-      brainEmbed
+      artblockEmbed
         .addFields({
           name: "Function",
           value: `${action}`,
@@ -107,16 +218,12 @@ app.post("/brain", async (req, res) => {
           name: "Value",
           value: `${Utils.formatEther(request.value)} ETH`,
           inline: true,
-        })
-        .addFields({
-          name: "Gas",
-          value: `Base: ${request.maxFeePerGasGwei} gwei\nPrio: ${request.maxPriorityFeePerGasGwei} gwei`,
         });
-      await brainWebhookClient.send({
+      await artblockClient.send({
         content: " ",
-        username: "brain",
+        username: "artblock",
         avatarURL: "https://i.imgur.com/AfFp7pu.png",
-        embeds: [brainEmbed],
+        embeds: [artblockEmbed],
       });
     }
   } catch (error) {
