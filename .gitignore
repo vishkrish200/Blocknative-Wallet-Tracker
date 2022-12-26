@@ -4,4 +4,3 @@ node_modules
 pb_data
 ngrok
 .DS_Store
-.github/workflows/main.yml
