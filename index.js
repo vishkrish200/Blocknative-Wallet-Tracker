@@ -4,7 +4,6 @@ import * as dotenv from "dotenv";
 dotenv.config();
 import { createClient } from "@supabase/supabase-js";
 import { Alchemy, Utils } from "alchemy-sdk";
-import express from "express";
 
 const app = express();
 const alchemy = new Alchemy();
